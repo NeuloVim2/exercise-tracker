@@ -49,8 +49,36 @@ exerciseTracker.post("/", (req, res) => {
   });
 });
 
-exerciseTracker.post("/:_id/exercise", (req, res) => {
+exerciseTracker.post("/:_id/exercises", (req, res) => {
   console.log(`sending POST request to ${req.baseUrl}`);
+  let id = req.params._id;
+  Exercise.findOneAndUpdate(
+    {
+      description: req.body.description,
+      duration: req.body.duration,
+      user: id,
+    },
+    {
+      description: req.body.description,
+      duration: req.body.duration,
+      user: id,
+    },
+    { new: true, upsert: true }
+  )
+    .populate("user")
+    .select("-_id -__v")
+    .exec((err, doc) => {
+      if (err) {
+        console.log(
+          `unable to create and return document, got such error: ${err}`
+        );
+        res.send("Unknown user id");
+      }
+      console.log(`created new document ${doc}`);
+      const { _id, username } = doc.user,
+        { description, duration, date } = doc;
+      res.json({ _id, username, date, duration, description });
+    });
 });
 
 module.exports = exerciseTracker;
