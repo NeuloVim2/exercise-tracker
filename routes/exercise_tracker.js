@@ -55,16 +55,17 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
   let exercisesInfo =
     req.body.date === undefined || req.body.date === null || req.body.date === ""
       ? {
-          description: req.body.description,
-          duration: req.body.duration,
-          user: id,
-        }
+        description: req.body.description,
+        duration: req.body.duration,
+        user: id,
+      }
       : {
-          description: req.body.description,
-          duration: req.body.duration,
-          date: req.body.date,
-          user: id,
-        };
+        description: req.body.description,
+        duration: req.body.duration,
+        date: req.body.date,
+        user: id,
+      };
+
   console.log(`object which send to findOneAndUpdate(): ${typeof exercisesInfo.date}`);
   Exercise.findOneAndUpdate(exercisesInfo, exercisesInfo, {
     new: true,
@@ -82,10 +83,31 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
       console.log(`created new document ${doc}`);
       const { _id, username } = doc.user,
         { description, duration } = doc;
-        let date = new Date(doc.date).toUTCString().split(" ");
-        date = `${date[0].split(",")[0]} ${date[2]} ${date[1]} ${date[3]}`;
+      let date = new Date(doc.date).toUTCString().split(" ");
+      date = `${date[0].split(",")[0]} ${date[2]} ${date[1]} ${date[3]}`;
       res.json({ _id, username, date, duration, description });
     });
 });
+
+exerciseTracker.get("/:_id/logs", (req, res) => {
+  let userId = req.params.id;
+
+  Exercise.find({ user: userId })
+    .select("-id -__v")
+    .exec((err, doc) => {
+      console.log(`accessing document ${doc}`)
+      if (err) console.log(`unable to find exercise with user: ${userId}. return error ${error}`);
+
+
+      // get user document info
+      const { _id, username } = doc[0].user,
+
+      // get number of exercises for user
+      count = doc.length;
+
+      res.json({ username, _id, count: count, log: doc })
+
+    })
+})
 
 module.exports = exerciseTracker;
