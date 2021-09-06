@@ -22,7 +22,7 @@ exerciseTracker.use(bodyParser.urlencoded({ extended: true }));
 exerciseTracker.use(bodyParser.json());
 
 exerciseTracker.get("/", (req, res) => {
-  console.log(`sending GET request to ${req.baseUrl}`);
+  console.log(`sending POST request to ${req.baseUrl}${req.url}`);
   User.find({})
     .where("username")
     .select("username _id")
@@ -37,7 +37,7 @@ exerciseTracker.get("/", (req, res) => {
 
 exerciseTracker.post("/", (req, res) => {
   let userName = req.body.username;
-  console.log(`sending POST request to ${req.baseUrl}`);
+  console.log(`sending POST request to ${req.baseUrl}${req.url}`);
   console.log(`saving to db ${userName} - user's name`);
   User.create({ username: `${userName}` }, (err, doc) => {
     if (err) {
@@ -50,21 +50,26 @@ exerciseTracker.post("/", (req, res) => {
 });
 
 exerciseTracker.post("/:_id/exercises", (req, res) => {
-  console.log(`sending POST request to ${req.baseUrl}`);
+  console.log(`sending POST request to ${req.baseUrl}${req.url}`);
   let id = req.params._id;
-  Exercise.findOneAndUpdate(
-    {
-      description: req.body.description,
-      duration: req.body.duration,
-      user: id,
-    },
-    {
-      description: req.body.description,
-      duration: req.body.duration,
-      user: id,
-    },
-    { new: true, upsert: true }
-  )
+  let exercisesInfo =
+    req.body.date === undefined || req.body.date === null || req.body.date === ""
+      ? {
+          description: req.body.description,
+          duration: req.body.duration,
+          user: id,
+        }
+      : {
+          description: req.body.description,
+          duration: req.body.duration,
+          date: req.body.date,
+          user: id,
+        };
+  console.log(`object which send to findOneAndUpdate(): ${typeof exercisesInfo.date}`);
+  Exercise.findOneAndUpdate(exercisesInfo, exercisesInfo, {
+    new: true,
+    upsert: true,
+  })
     .populate("user")
     .select("-_id -__v")
     .exec((err, doc) => {
@@ -76,7 +81,9 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
       }
       console.log(`created new document ${doc}`);
       const { _id, username } = doc.user,
-        { description, duration, date } = doc;
+        { description, duration } = doc;
+        let date = new Date(doc.date).toUTCString().split(" ");
+        date = `${date[0].split(",")[0]} ${date[2]} ${date[1]} ${date[3]}`;
       res.json({ _id, username, date, duration, description });
     });
 });
