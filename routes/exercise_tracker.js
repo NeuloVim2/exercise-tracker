@@ -90,10 +90,11 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
 });
 
 exerciseTracker.get("/:_id/logs", (req, res) => {
-  let userId = req.params.id;
-
+  let userId = req.params._id;
+  console.log(`user id: ${userId}`);
   Exercise.find({ user: userId })
-    .select("-id -__v")
+    .populate("user")
+    .select("-_id -__v")
     .exec((err, doc) => {
       console.log(`accessing document ${doc}`)
       if (err) console.log(`unable to find exercise with user: ${userId}. return error ${error}`);
@@ -102,10 +103,21 @@ exerciseTracker.get("/:_id/logs", (req, res) => {
       // get user document info
       const { _id, username } = doc[0].user,
 
-      // get number of exercises for user
-      count = doc.length;
+        // get number of exercises for user
+        count = doc.length;
 
-      res.json({ username, _id, count: count, log: doc })
+      res.json({
+        username, _id, count: count, log: doc.map((document) => {
+          let newDoc = {};
+          Object.entries(document._doc).forEach((key) => key === "description" || "duration" || "date"
+            ? newDoc[key] = document[key]
+            // ? console.log(key)
+            : false
+          )
+          return newDoc
+        })
+      })
+      // res.json(doc)
 
     })
 })
