@@ -57,28 +57,35 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
       ? {
         description: req.body.description,
         duration: req.body.duration,
-        user: id,
       }
       : {
         description: req.body.description,
         duration: req.body.duration,
         date: req.body.date,
-        user: id,
       };
 
   console.log(`object which send to findOneAndUpdate(): ${typeof exercisesInfo.date}`);
-  Exercise.findOneAndUpdate(exercisesInfo, exercisesInfo, {
-    new: true,
-    upsert: true,
-  })
-    .populate("user")
+  User.findById({ id })
+    .populate("log")
     .select("-_id -__v")
-    .exec((err, doc) => {
+    .exec((err, user) => {
       if (err) {
         console.log(
           `unable to create and return document, got such error: ${err}`
         );
         res.send("Unknown user id");
+      }
+
+
+      // TODO: add comparison for user.log[n].description === exercisesInfo.description ...
+      let exerciseExist = exercisesInfo.duration && exercisesInfo.description && exercisesInfo.date
+
+      if (!exerciseExist) {
+        Exercise.create(exercisesInfo, (err, doc) => {
+          if (err) {
+            console.log(`unable to save documnet to db: ${err}`);
+          }
+        })
       }
       console.log(`created new document ${doc}`);
       const { _id, username } = doc.user,
