@@ -65,9 +65,9 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
       };
 
   console.log(`object which send to findOneAndUpdate(): ${typeof exercisesInfo.date}`);
-  User.findById({ id })
+  User.findById(id)
     .populate("log")
-    .select("-_id -__v")
+    .select("-_v")
     .exec((err, user) => {
       if (err) {
         console.log(
@@ -78,21 +78,40 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
 
 
       // TODO: add comparison for user.log[n].description === exercisesInfo.description ...
-      let exerciseExist = exercisesInfo.duration && exercisesInfo.description && exercisesInfo.date
+      let exerciseExist = user.log.some(element => {
+        for (let item in element) {
+          switch (item) {
+            case "duration": element.duration === exercisesInfo.duration
+              break;
+
+            case "description": element.description === exercisesInfo.description
+              break;
+
+            // case "date": element.date === exercisesInfo.date
+            //   break;
+          }
+        }
+      })
+
+      console.log(`exercise exist? - ${exerciseExist}`);
 
       if (!exerciseExist) {
-        Exercise.create(exercisesInfo, (err, doc) => {
+        Exercise.create(exercisesInfo, (err, exer) => {
           if (err) {
             console.log(`unable to save documnet to db: ${err}`);
           }
+
+          console.log(`created new document ${exer}`);
+          const { _id, username } = user,
+            { description, duration } = exer;
+          let date = new Date(doc.date).toUTCString().split(" ");
+          date = `${date[0].split(",")[0]} ${date[2]} ${date[1]} ${date[3]}`;
+          res.json({ _id, username, date, duration, description });
+
         })
       }
-      console.log(`created new document ${doc}`);
-      const { _id, username } = doc.user,
-        { description, duration } = doc;
-      let date = new Date(doc.date).toUTCString().split(" ");
-      date = `${date[0].split(",")[0]} ${date[2]} ${date[1]} ${date[3]}`;
-      res.json({ _id, username, date, duration, description });
+
+      if (exerciseExist) res.json 
     });
 });
 
