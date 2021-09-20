@@ -76,26 +76,11 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
         res.send("Unknown user id");
       }
 
-
-      // TODO: add comparison for user.log[n].description === exercisesInfo.description ...
-      let exerciseExist = user.log.some(element => {
-        for (let item in element) {
-          switch (item) {
-            case "duration": element.duration === exercisesInfo.duration
-              break;
-
-            case "description": element.description === exercisesInfo.description
-              break;
-
-            // case "date": element.date === exercisesInfo.date
-            //   break;
-          }
-        }
-      })
+      let exerciseExist = isExerciseExist(user, exercisesInfo)
 
       console.log(`exercise exist? - ${exerciseExist}`);
 
-      if (!exerciseExist) {
+      if (!isExerciseExist(user, exercisesInfo)) {
         Exercise.create(exercisesInfo, (err, exer) => {
           if (err) {
             console.log(`unable to save documnet to db: ${err}`);
@@ -104,14 +89,15 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
           console.log(`created new document ${exer}`);
           const { _id, username } = user,
             { description, duration } = exer;
-          let date = new Date(doc.date).toUTCString().split(" ");
+          let date = new Date(exer.date).toUTCString().split(" ");
           date = `${date[0].split(",")[0]} ${date[2]} ${date[1]} ${date[3]}`;
+          user.log.push(exer._id);
           res.json({ _id, username, date, duration, description });
 
         })
       }
 
-      if (exerciseExist) res.json 
+      if (exerciseExist) res.json("exercise exist") 
     });
 });
 
@@ -147,5 +133,20 @@ exerciseTracker.get("/:_id/logs", (req, res) => {
 
     })
 })
+
+// params[user: UserModel, exercise: ExerciseInfo]
+const isExerciseExist = (user, exercise) => {
+  console.log(`in isExerciseExist()`);
+  console.log(`user ${user}`);
+  // user.log[n] is not empty
+  return user.log.length > 0
+  
+  // get execise from user.log[n] 
+  ? user.log.some( exer => {
+    console.log(`Object entries ${Object.entries(exer)}`);
+  })
+
+  : false;
+}
 
 module.exports = exerciseTracker;
