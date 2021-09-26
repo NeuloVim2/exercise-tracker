@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const exerciseSchema = new Schema({
+
   description: {
     type: String,
     required: true,
@@ -12,8 +13,8 @@ const exerciseSchema = new Schema({
     required: true,
   },
   date: {
-    type: Date,
-    default: Date.now(),
+    type: String,
+    set: (d) => d === undefined ? new Date().toDateString() : d
   }
 });
 

@@ -51,102 +51,63 @@ exerciseTracker.post("/", (req, res) => {
 
 exerciseTracker.post("/:_id/exercises", (req, res) => {
   console.log(`sending POST request to ${req.baseUrl}${req.url}`);
-  let id = req.params._id;
-  let exercisesInfo =
-    req.body.date === undefined || req.body.date === null || req.body.date === ""
-      ? {
-        description: req.body.description,
-        duration: req.body.duration,
-      }
-      : {
-        description: req.body.description,
-        duration: req.body.duration,
-        date: req.body.date,
-      };
+  const _id = req.params._id;
+  const { duration, description, date } = req.body;
 
-  console.log(`object which send to findOneAndUpdate(): ${typeof exercisesInfo.date}`);
-  User.findById(id)
-    .populate("log")
-    .select("-_v")
-    .exec((err, user) => {
-      if (err) {
-        console.log(
-          `unable to create and return document, got such error: ${err}`
-        );
-        res.send("Unknown user id");
-      }
+  let verifyedDate = date ? new Date(date).toDateString() : undefined;
 
-      let exerciseExist = isExerciseExist(user, exercisesInfo)
+  Exercise.create({ duration, description, date: verifyedDate }, (err, exer) => {
+    if (err) {
+      console.log(`unable to save documnet to db: ${err}`);
+    }
 
-      console.log(`exercise exist? - ${exerciseExist}`);
+    console.log(`created new document ${exer}`);
+    console.log(`type of exer.duration: ${typeof exer.duration}`)
 
-      if (!isExerciseExist(user, exercisesInfo)) {
-        Exercise.create(exercisesInfo, (err, exer) => {
-          if (err) {
-            console.log(`unable to save documnet to db: ${err}`);
-          }
+    User.findOneAndUpdate({ _id: _id }, { $push: {log: exer._id} }, {new: true})
+      .exec((err, user) => {
+        if (err) {
+          console.log(
+            `unable to create and return document, got such error: ${err}`
+          );
+          res.send("Unknown user id");
+        }
 
-          console.log(`created new document ${exer}`);
-          const { _id, username } = user,
-            { description, duration } = exer;
-          let date = new Date(exer.date).toUTCString().split(" ");
-          date = `${date[0].split(",")[0]} ${date[2]} ${date[1]} ${date[3]}`;
-          user.log.push(exer._id);
-          res.json({ _id, username, date, duration, description });
+        console.log("user document", user);
 
-        })
-      }
+        console.log(`user.log value AFTER PUSH: ${user.log}`);
 
-      if (exerciseExist) res.json("exercise exist") 
-    });
+        console.log(`value of exercisesInfo.date AFTER assignment: ${verifyedDate}`);
+
+        const username = user.username;
+
+        res.status(200).json({ _id, username, date: exer.date, duration, description });
+      })
+
+  })
 });
 
 exerciseTracker.get("/:_id/logs", (req, res) => {
   let userId = req.params._id;
   console.log(`user id: ${userId}`);
-  Exercise.find({ user: userId })
-    .populate("user")
-    .select("-_id -__v")
-    .exec((err, doc) => {
-      console.log(`accessing document ${doc}`)
-      if (err) console.log(`unable to find exercise with user: ${userId}. return error ${error}`);
-
-
-      // get user document info
-      const { _id, username } = doc[0].user,
-
-        // get number of exercises for user
-        count = doc.length;
-
-      res.json({
-        username, _id, count: count, log: doc.map((document) => {
-          let newDoc = {};
-          Object.entries(document._doc).forEach((key) => key === "description" || "duration" || "date"
-            ? newDoc[key] = document[key]
-            // ? console.log(key)
-            : false
-          )
-          return newDoc
-        })
+  User.findById(userId)
+    .populate("log")
+    .select("-__v")
+    .exec()
+    .then((user) => {
+      const count = user.log.length;
+      let log = user.log.map((el) => {
+        return { 
+          duration: el.duration, 
+          description: el.description, 
+          date: el.date
+        }
       })
-      // res.json(doc)
-
+      res.status(200).json({username: user.username, _id: user._id, log: log, count: count});
+    })
+    .catch((err) => {
+      res.status(400).json(`Unable to find user an got such error: ${err}`);
     })
 })
-
-// params[user: UserModel, exercise: ExerciseInfo]
-const isExerciseExist = (user, exercise) => {
-  console.log(`in isExerciseExist()`);
-  console.log(`user ${user}`);
-  // user.log[n] is not empty
-  return user.log.length > 0
-  
-  // get execise from user.log[n] 
-  ? user.log.some( exer => {
-    console.log(`Object entries ${Object.entries(exer)}`);
-  })
-
-  : false;
-}
 
 module.exports = exerciseTracker;
