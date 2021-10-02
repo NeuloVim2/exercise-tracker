@@ -30,7 +30,6 @@ exerciseTracker.get("/", (req, res) => {
       if (err) {
         console.log(`faild to find any document by ${username} key: ${err}`);
       }
-      console.log(`return array of documents`);
       res.json(doc);
     });
 });
@@ -43,8 +42,6 @@ exerciseTracker.post("/", (req, res) => {
     if (err) {
       console.log(`unable to save documnet to db: ${err}`);
     }
-    console.log(`user with username: ${userName} - successfuly saved to db`);
-    console.log(`that what is saved to db: ${doc}`);
     res.json({ username: userName, _id: doc._id });
   });
 });
@@ -61,8 +58,6 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
       console.log(`unable to save documnet to db: ${err}`);
     }
 
-    console.log(`created new document ${exer}`);
-    console.log(`type of exer.duration: ${typeof exer.duration}`)
 
     User.findOneAndUpdate({ _id: _id }, { $push: { log: exer._id } }, { new: true })
       .exec((err, user) => {
@@ -72,12 +67,6 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
           );
           res.send("Unknown user id");
         }
-
-        console.log("user document", user);
-
-        console.log(`user.log value AFTER PUSH: ${user.log}`);
-
-        console.log(`value of exercisesInfo.date AFTER assignment: ${verifyedDate}`);
 
         const username = user.username;
 
