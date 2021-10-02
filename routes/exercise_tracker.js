@@ -64,7 +64,7 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
     console.log(`created new document ${exer}`);
     console.log(`type of exer.duration: ${typeof exer.duration}`)
 
-    User.findOneAndUpdate({ _id: _id }, { $push: {log: exer._id} }, {new: true})
+    User.findOneAndUpdate({ _id: _id }, { $push: { log: exer._id } }, { new: true })
       .exec((err, user) => {
         if (err) {
           console.log(
@@ -81,29 +81,49 @@ exerciseTracker.post("/:_id/exercises", (req, res) => {
 
         const username = user.username;
 
-        res.status(200).json({ _id, username, date: exer.date, duration, description });
+        res.status(200).json({ _id, username, date: exer.date, duration: exer.duration, description });
       })
 
   })
 });
 
-exerciseTracker.get("/:_id/logs", (req, res) => {
+exerciseTracker.get("/:_id/logs", async (req, res) => {
   let userId = req.params._id;
   console.log(`user id: ${userId}`);
+
   User.findById(userId)
-    .populate("log")
     .select("-__v")
+    .populate({
+      path: "log",
+      select: "duration description date"
+    })
     .exec()
     .then((user) => {
-      const count = user.log.length;
-      let log = user.log.map((el) => {
-        return { 
-          duration: el.duration, 
-          description: el.description, 
-          date: el.date
+    
+      // get values from url
+      let limit = req.query.limit || user.log.length;
+      let from = req.query.from || "";
+      let to = req.query.to || "";
+
+      console.log(`User doc: ${user}`);
+
+      let response = user;
+
+      response.log = user.log.slice(0, limit);
+
+      if (from || to) {
+        if (!from) {
+          console.log(`in from`)
+          from = new Date();
         }
-      })
-      res.status(200).json({username: user.username, _id: user._id, log: log, count: count});
+        if (!to) {
+          console.log(`in to`)
+          to = new Date();
+        }
+        response.log = response.log.filter(el => new Date(el.date) >= new Date(from) && new Date(el.date) <= new Date(to))
+      }
+      const count = response.log.length;
+      res.status(200).json({ username: response.username, _id: response._id, log: response.log, count: count });
     })
     .catch((err) => {
       res.status(400).json(`Unable to find user an got such error: ${err}`);
